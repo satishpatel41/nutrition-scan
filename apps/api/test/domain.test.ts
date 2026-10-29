@@ -89,7 +89,8 @@ describe('comparison', () => {
 
 describe('extraction provider', () => {
   it('fails loudly when not configured', async () => {
-    await expect(getExtractionProvider({} as NodeJS.ProcessEnv).extract()).rejects.toBeInstanceOf(
+    const img = { bytes: new Uint8Array(), mimeType: 'image/jpeg' };
+    await expect(getExtractionProvider({} as NodeJS.ProcessEnv).extract(img)).rejects.toBeInstanceOf(
       ProviderNotConfiguredError,
     );
   });
