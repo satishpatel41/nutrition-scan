@@ -1,0 +1,74 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  scans        Scan[]
+  reports      ProductReport[]
+}
+
+model Scan {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category        String?
+  productName     String?
+  imageKeys       String[] // S3-compatible object keys
+  status          ScanStatus @default(EXTRACTED)
+  // Label values exactly as extracted (and later user-corrected). Never AI-inferred.
+  extracted       Json
+  // Per-field confidence + source: { field: { value, confidence, source } }
+  fieldMeta       Json
+  assessment      Json?
+  createdAt       DateTime @default(now())
+  deletedAt       DateTime?
+  corrections     ScanCorrection[]
+
+  @@index([userId, createdAt])
+}
+
+enum ScanStatus {
+  EXTRACTED
+  NEEDS_NUTRITION_LABEL
+  CORRECTED
+}
+
+model ScanCorrection {
+  id        String   @id @default(cuid())
+  scanId    String
+  scan      Scan     @relation(fields: [scanId], references: [id], onDelete: Cascade)
+  field     String
+  oldValue  Json?
+  newValue  Json
+  createdAt DateTime @default(now())
+}
+
+model ProductReport {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  scanId    String?
+  reason    String
+  details   String?
+  createdAt DateTime @default(now())
+}
+
+model CriteriaVersion {
+  id        String   @id @default(cuid())
+  name      String
+  version   Int
+  config    Json     // thresholds + weights, see domain/criteria.ts
+  active    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@unique([name, version])
+}
